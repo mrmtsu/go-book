@@ -11,28 +11,27 @@ import (
 
 const (
 	indexuniqueEmail = "email_UNIQUE"
+	errorNoRows      = "no rows in result set"
 	queryInsertUser  = "INSERT INTO users_db.users(first_name, last_name, email, date_created) VALUES(?, ?, ?, ?);"
-)
-
-var (
-	usersDB = make(map[int64]*User)
+	queryGetUser     = "SELECT id, first_name, last_name, email, date_created FROM users_db.users WHERE id=?;"
 )
 
 func (u *User) Get() *errors.RestErr {
-	if err := users_db.Client.Ping(); err != nil {
-		panic(err)
+	stmt, err := users_db.Client.Prepare(queryGetUser)
+	if err != nil {
+		return errors.NewInternalServerError(err.Error())
+	}
+	defer stmt.Close()
+
+	result := stmt.QueryRow(u.Id)
+
+	if err := result.Scan(&u.Id, &u.FirstName, &u.LastName, &u.Email, &u.DateCreated); err != nil {
+		if strings.Contains(err.Error(), errorNoRows) {
+			return errors.NewNotFoundError(fmt.Sprintf("user %d not found", u.Id))
+		}
+		return errors.NewInternalServerError(fmt.Sprintf("error when trying to get user %d: %s", u.Id, err.Error()))
 	}
 
-	result := usersDB[u.Id]
-	if result == nil {
-		return errors.NewNotFoundError(fmt.Sprintf("user %d not found", u.Id))
-	}
-
-	u.Id = result.Id
-	u.FirstName = result.FirstName
-	u.LastName = result.LastName
-	u.Email = result.Email
-	u.DateCreated = result.DateCreated
 	return nil
 }
 
