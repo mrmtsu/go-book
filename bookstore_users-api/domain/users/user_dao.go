@@ -11,6 +11,7 @@ const (
 	errorNoRows     = "no rows in result set"
 	queryInsertUser = "INSERT INTO users_db.users(first_name, last_name, email, date_created) VALUES(?, ?, ?, ?);"
 	queryGetUser    = "SELECT id, first_name, last_name, email, date_created FROM users_db.users WHERE id=?;"
+	queryUpdateUser = "UPDATE users_db.users SET first_name=?, last_name=?, email=? WHERE id=?;"
 )
 
 func (u *User) Get() *errors.RestErr {
@@ -47,5 +48,19 @@ func (u *User) Save() *errors.RestErr {
 		return mysql_utils.ParseError(saveErr)
 	}
 	u.Id = userId
+	return nil
+}
+
+func (u *User) Update() *errors.RestErr {
+	stmt, err := users_db.Client.Prepare(queryUpdateUser)
+	if err != nil {
+		return errors.NewInternalServerError(err.Error())
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(u.FirstName, u.LastName, u.Email, u.Id)
+	if err != nil {
+		return mysql_utils.ParseError(err)
+	}
 	return nil
 }
