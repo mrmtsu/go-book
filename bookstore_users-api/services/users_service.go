@@ -24,3 +24,33 @@ func CreateUser(u users.User) (*users.User, *errors.RestErr) {
 
 	return &u, nil
 }
+
+func UpdateUser(isPartial bool, u users.User) (*users.User, *errors.RestErr) {
+	current, err := GetUser(u.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	if isPartial {
+		if u.FirstName != "" {
+			current.FirstName = u.FirstName
+		}
+
+		if u.LastName != "" {
+			current.LastName = u.LastName
+		}
+
+		if u.Email != "" {
+			current.Email = u.Email
+		}
+	} else {
+		current.FirstName = u.FirstName
+		current.LastName = u.LastName
+		current.Email = u.Email
+	}
+
+	if err := current.Update(); err != nil {
+		return nil, err
+	}
+	return current, nil
+}
